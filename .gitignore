@@ -1,0 +1,23 @@
+# Python cache/artifacts
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local editor settings
+.vscode/
+.idea/
+
+# Project-generated output
+output/
+test-pdfs/
+*.pdf
+*.bat
+
+# OS/log noise
+Thumbs.db
+.DS_Store
+*.log
