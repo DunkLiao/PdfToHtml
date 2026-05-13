@@ -2,6 +2,10 @@
 __pycache__/
 *.py[cod]
 
+
+#AI AGENTS
+AGENTS.md
+
 # Virtual environments
 .venv/
 venv/
