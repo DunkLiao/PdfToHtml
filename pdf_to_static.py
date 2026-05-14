@@ -245,6 +245,18 @@ def build_presentation_html(item: ConvertedPdf, slide_notes: dict[tuple[str, int
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{safe_title}</title>
+    <script>
+      (function () {{
+        let savedTheme = "day";
+        const params = new URLSearchParams(window.location.search);
+        try {{
+          savedTheme = localStorage.getItem("pdf-presentation-theme") || "day";
+        }} catch (error) {{}}
+        const requestedTheme = params.get("theme") || savedTheme;
+        const theme = requestedTheme === "night" ? "night" : "day";
+        document.documentElement.dataset.theme = theme;
+      }}());
+    </script>
     <link rel="stylesheet" href="vendor/reveal.js/dist/reset.css" />
     <link rel="stylesheet" href="vendor/reveal.js/dist/reveal.css" />
     <link rel="stylesheet" href="vendor/reveal.js/dist/theme/white.css" />
@@ -253,13 +265,48 @@ def build_presentation_html(item: ConvertedPdf, slide_notes: dict[tuple[str, int
         --stage-bg: #eef2f7;
         --slide-bg: #ffffff;
         --ink: #172033;
+        --muted: #5f6b7a;
+        --subtle: #7a8594;
         --primary: #0b5cab;
+        --line: #d8e0ea;
+        --panel-bg: #ffffff;
+        --button-bg: #eef2f7;
+        --overlay-bg: rgb(23 32 51 / 78%);
+        --slide-number-bg: rgb(23 32 51 / 82%);
+        --panel-shadow: -10px 0 24px rgb(23 32 51 / 10%);
         --notes-panel-width: 360px;
+        color-scheme: light;
       }}
 
+      html[data-theme="night"] {{
+        --stage-bg: #111827;
+        --slide-bg: #0f172a;
+        --ink: #e5e7eb;
+        --muted: #aab4c3;
+        --subtle: #8793a4;
+        --primary: #6fb6ff;
+        --line: #334155;
+        --panel-bg: #182235;
+        --button-bg: #253249;
+        --overlay-bg: rgb(15 23 42 / 86%);
+        --slide-number-bg: rgb(15 23 42 / 88%);
+        --panel-shadow: -10px 0 24px rgb(0 0 0 / 28%);
+        color-scheme: dark;
+      }}
+
+      html,
       body {{
-        margin: 0;
         background: var(--stage-bg);
+        margin: 0;
+      }}
+
+      body.reveal-viewport,
+      .reveal-viewport,
+      .reveal,
+      .reveal .backgrounds,
+      .reveal .slide-background {{
+        background: var(--stage-bg);
+        background-color: var(--stage-bg);
       }}
 
       .reveal {{
@@ -304,7 +351,7 @@ def build_presentation_html(item: ConvertedPdf, slide_notes: dict[tuple[str, int
       }}
 
       .reveal .slide-fragments span {{
-        background: rgb(23 32 51 / 78%);
+        background: var(--overlay-bg);
         border-radius: 4px;
         color: #ffffff;
         font-size: 18px;
@@ -318,14 +365,38 @@ def build_presentation_html(item: ConvertedPdf, slide_notes: dict[tuple[str, int
       }}
 
       .reveal .slide-number {{
-        background: rgb(23 32 51 / 82%);
+        background: var(--slide-number-bg);
+      }}
+
+      .theme-toggle {{
+        background: var(--panel-bg);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        box-shadow: 0 8px 20px rgb(23 32 51 / 12%);
+        color: var(--ink);
+        cursor: pointer;
+        font-family: Arial, "Microsoft JhengHei", sans-serif;
+        font-size: 18px;
+        font-weight: 700;
+        height: 38px;
+        left: 14px;
+        line-height: 1;
+        padding: 0;
+        position: fixed;
+        top: 14px;
+        width: 38px;
+        z-index: 45;
+      }}
+
+      html[data-theme="night"] .theme-toggle {{
+        box-shadow: 0 8px 20px rgb(0 0 0 / 28%);
       }}
 
       .notes-panel {{
-        background: #ffffff;
-        border-left: 1px solid #d8e0ea;
+        background: var(--panel-bg);
+        border-left: 1px solid var(--line);
         bottom: 0;
-        box-shadow: -10px 0 24px rgb(23 32 51 / 10%);
+        box-shadow: var(--panel-shadow);
         box-sizing: border-box;
         color: var(--ink);
         display: flex;
@@ -351,7 +422,7 @@ def build_presentation_html(item: ConvertedPdf, slide_notes: dict[tuple[str, int
 
       .notes-panel__header {{
         align-items: center;
-        border-bottom: 1px solid #d8e0ea;
+        border-bottom: 1px solid var(--line);
         display: flex;
         gap: 12px;
         justify-content: space-between;
@@ -365,7 +436,7 @@ def build_presentation_html(item: ConvertedPdf, slide_notes: dict[tuple[str, int
       }}
 
       .notes-panel__close {{
-        background: #eef2f7;
+        background: var(--button-bg);
         border: 0;
         border-radius: 4px;
         color: var(--ink);
@@ -377,7 +448,7 @@ def build_presentation_html(item: ConvertedPdf, slide_notes: dict[tuple[str, int
       }}
 
       .notes-panel__timers {{
-        border-bottom: 1px solid #d8e0ea;
+        border-bottom: 1px solid var(--line);
         display: grid;
         gap: 8px;
         grid-template-columns: repeat(3, 1fr);
@@ -390,7 +461,7 @@ def build_presentation_html(item: ConvertedPdf, slide_notes: dict[tuple[str, int
       }}
 
       .notes-panel__timer-label {{
-        color: #5f6b7a;
+        color: var(--muted);
         font-size: 12px;
         margin-bottom: 4px;
       }}
@@ -404,7 +475,7 @@ def build_presentation_html(item: ConvertedPdf, slide_notes: dict[tuple[str, int
       }}
 
       .notes-panel__meta {{
-        color: #5f6b7a;
+        color: var(--muted);
         font-size: 13px;
         margin-bottom: 12px;
       }}
@@ -417,14 +488,14 @@ def build_presentation_html(item: ConvertedPdf, slide_notes: dict[tuple[str, int
       }}
 
       .notes-panel__empty {{
-        color: #7a8594;
+        color: var(--subtle);
         font-style: italic;
       }}
 
       @media (max-width: 900px) {{
         .notes-panel {{
           border-left: 0;
-          border-top: 1px solid #d8e0ea;
+          border-top: 1px solid var(--line);
           height: 34vh;
           top: auto;
           transform: translateY(100%);
@@ -443,6 +514,8 @@ def build_presentation_html(item: ConvertedPdf, slide_notes: dict[tuple[str, int
     </style>
   </head>
   <body>
+    <button class="theme-toggle" type="button" aria-label="切換夜晚模式" aria-pressed="false">🌙</button>
+
     <div class="reveal">
       <div class="slides">
 {section_markup}
@@ -490,6 +563,7 @@ def build_presentation_html(item: ConvertedPdf, slide_notes: dict[tuple[str, int
       const notesMeta = document.querySelector(".notes-panel__meta");
       const notesContent = document.querySelector(".notes-panel__content");
       const notesClose = document.querySelector(".notes-panel__close");
+      const themeToggle = document.querySelector(".theme-toggle");
       const totalTimer = document.querySelector('[data-timer="total"]');
       const slideTimer = document.querySelector('[data-timer="slide"]');
       const clockTimer = document.querySelector('[data-timer="clock"]');
@@ -547,8 +621,30 @@ def build_presentation_html(item: ConvertedPdf, slide_notes: dict[tuple[str, int
         }}
       }}
 
+      function setTheme(theme) {{
+        const nextTheme = theme === "night" ? "night" : "day";
+        document.documentElement.dataset.theme = nextTheme;
+        try {{
+          localStorage.setItem("pdf-presentation-theme", nextTheme);
+        }} catch (error) {{}}
+        try {{
+          const url = new URL(window.location.href);
+          url.searchParams.set("theme", nextTheme);
+          window.history.replaceState(null, "", url);
+        }} catch (error) {{}}
+        themeToggle.textContent = nextTheme === "night" ? "☀️" : "🌙";
+        themeToggle.setAttribute("aria-label", nextTheme === "night" ? "切換日間模式" : "切換夜晚模式");
+        themeToggle.setAttribute("aria-pressed", nextTheme === "night" ? "true" : "false");
+      }}
+
+      setTheme(document.documentElement.dataset.theme);
+
       notesClose.addEventListener("click", function () {{
         setInlineNotes(false);
+      }});
+
+      themeToggle.addEventListener("click", function () {{
+        setTheme(document.documentElement.dataset.theme === "night" ? "day" : "night");
       }});
 
       Reveal.on("slidechanged", syncInlineNotes);
@@ -596,7 +692,7 @@ def build_presentation_html(item: ConvertedPdf, slide_notes: dict[tuple[str, int
 def build_index_html(items: list[ConvertedPdf]) -> str:
     links = "\n".join(
         f"""        <li>
-          <a href="{html.escape(item.presentation_html.name)}">{html.escape(item.title)}</a>
+          <a href="{html.escape(item.presentation_html.name)}" data-presentation-link>{html.escape(item.title)}</a>
           <span>{item.page_count} slides</span>
         </li>"""
         for item in items
@@ -607,6 +703,18 @@ def build_index_html(items: list[ConvertedPdf]) -> str:
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>PDF Presentations</title>
+    <script>
+      (function () {{
+        let savedTheme = "day";
+        const params = new URLSearchParams(window.location.search);
+        try {{
+          savedTheme = localStorage.getItem("pdf-presentation-theme") || "day";
+        }} catch (error) {{}}
+        const requestedTheme = params.get("theme") || savedTheme;
+        const theme = requestedTheme === "night" ? "night" : "day";
+        document.documentElement.dataset.theme = theme;
+      }}());
+    </script>
     <style>
       :root {{
         --bg: #eef2f7;
@@ -615,6 +723,17 @@ def build_index_html(items: list[ConvertedPdf]) -> str:
         --muted: #5f6b7a;
         --primary: #0b5cab;
         --line: #d8e0ea;
+        color-scheme: light;
+      }}
+
+      html[data-theme="night"] {{
+        --bg: #111827;
+        --surface: #182235;
+        --ink: #e5e7eb;
+        --muted: #aab4c3;
+        --primary: #6fb6ff;
+        --line: #334155;
+        color-scheme: dark;
       }}
 
       body {{
@@ -636,6 +755,29 @@ def build_index_html(items: list[ConvertedPdf]) -> str:
         letter-spacing: 0;
         line-height: 1.2;
         margin: 0 0 10px;
+      }}
+
+      .page-header {{
+        align-items: flex-start;
+        display: flex;
+        gap: 16px;
+        justify-content: space-between;
+      }}
+
+      .theme-toggle {{
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        color: var(--ink);
+        cursor: pointer;
+        flex: 0 0 auto;
+        font: inherit;
+        font-size: 18px;
+        font-weight: 700;
+        height: 38px;
+        line-height: 1;
+        padding: 0;
+        width: 38px;
       }}
 
       p {{
@@ -682,6 +824,15 @@ def build_index_html(items: list[ConvertedPdf]) -> str:
       }}
 
       @media (max-width: 560px) {{
+        .page-header {{
+          align-items: stretch;
+          flex-direction: column;
+        }}
+
+        .theme-toggle {{
+          align-self: flex-start;
+        }}
+
         li {{
           align-items: flex-start;
           flex-direction: column;
@@ -692,12 +843,51 @@ def build_index_html(items: list[ConvertedPdf]) -> str:
   </head>
   <body>
     <main>
-      <h1>PDF Presentations</h1>
+      <div class="page-header">
+        <h1>PDF Presentations</h1>
+        <button class="theme-toggle" type="button" aria-label="切換夜晚模式" aria-pressed="false">🌙</button>
+      </div>
       <p>選擇一份文件開始播放投影片。</p>
       <ul>
 {links}
       </ul>
     </main>
+    <script>
+      const themeToggle = document.querySelector(".theme-toggle");
+
+      function setTheme(theme) {{
+        const nextTheme = theme === "night" ? "night" : "day";
+        document.documentElement.dataset.theme = nextTheme;
+        try {{
+          localStorage.setItem("pdf-presentation-theme", nextTheme);
+        }} catch (error) {{}}
+        try {{
+          const url = new URL(window.location.href);
+          url.searchParams.set("theme", nextTheme);
+          window.history.replaceState(null, "", url);
+        }} catch (error) {{}}
+        themeToggle.textContent = nextTheme === "night" ? "☀️" : "🌙";
+        themeToggle.setAttribute("aria-label", nextTheme === "night" ? "切換日間模式" : "切換夜晚模式");
+        themeToggle.setAttribute("aria-pressed", nextTheme === "night" ? "true" : "false");
+        updatePresentationLinks(nextTheme);
+      }}
+
+      function updatePresentationLinks(theme) {{
+        document.querySelectorAll("[data-presentation-link]").forEach(function (link) {{
+          try {{
+            const url = new URL(link.getAttribute("href"), window.location.href);
+            url.searchParams.set("theme", theme);
+            link.href = url.href;
+          }} catch (error) {{}}
+        }});
+      }}
+
+      setTheme(document.documentElement.dataset.theme);
+
+      themeToggle.addEventListener("click", function () {{
+        setTheme(document.documentElement.dataset.theme === "night" ? "day" : "night");
+      }});
+    </script>
   </body>
 </html>
 """
