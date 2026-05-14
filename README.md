@@ -87,6 +87,8 @@ Windows 使用者可以直接執行：
 .\run_convert.bat
 ```
 
+執行時會提示輸入首頁標題。直接按 Enter 會使用預設值 `PDF Presentations`。
+
 批次檔預設會讀取：
 
 ```text
@@ -105,6 +107,12 @@ Windows 使用者可以直接執行：
 .\run_convert.bat .\my-pdfs
 ```
 
+也可以把首頁標題放在第二個參數，適合需要固定設定或自動化執行時使用：
+
+```powershell
+.\run_convert.bat .\my-pdfs "風險管理簡報"
+```
+
 如果你的 Python 安裝位置比較特殊，請先開啟 `run_convert.bat`，依照自己的環境調整設定。
 
 ## 轉檔參數
@@ -115,6 +123,7 @@ Windows 使用者可以直接執行：
 | `--output-dir` | 否 | `presentation` | 轉換後的網頁、圖片與簡報資源輸出位置 |
 | `--dpi` | 否 | `144` | 圖片解析度。數字越高越清楚，但檔案也越大 |
 | `--quality` | 否 | `80` | WebP 圖片品質，範圍為 `0` 到 `100` |
+| `--site-title` | 否 | `PDF Presentations` | 首頁瀏覽器標題與頁面主標題 |
 
 一般使用建議保留預設值：
 
@@ -132,6 +141,12 @@ python .\pdf_to_static.py --input-dir .\my-pdfs --dpi 180
 
 ```powershell
 python .\pdf_to_static.py --input-dir .\my-pdfs --quality 70
+```
+
+如果要自訂首頁標題，可以設定：
+
+```powershell
+python .\pdf_to_static.py --input-dir .\my-pdfs --site-title "風險管理簡報"
 ```
 
 ## 輸出結果
@@ -170,6 +185,7 @@ presentation\
 | `R` | 重置總時間與本頁時間 |
 | `B` | 切換黑畫面暫停 |
 | 左上角月亮 / 太陽按鈕 | 切換日間或夜晚模式 |
+| 左上角問號按鈕 | 開啟使用說明與熱鍵列表 |
 
 ## 加入講者備註與逐步提示
 

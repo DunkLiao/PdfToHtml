@@ -62,6 +62,11 @@ def parse_args() -> argparse.Namespace:
         default=80,
         help="WebP quality 0-100 (default: 80).",
     )
+    parser.add_argument(
+        "--site-title",
+        default="PDF Presentations",
+        help='Title used for the generated index page (default: "PDF Presentations").',
+    )
     return parser.parse_args()
 
 
@@ -368,7 +373,16 @@ def build_presentation_html(item: ConvertedPdf, slide_notes: dict[tuple[str, int
         background: var(--slide-number-bg);
       }}
 
-      .theme-toggle {{
+      .presentation-tools {{
+        display: flex;
+        gap: 8px;
+        left: 14px;
+        position: fixed;
+        top: 14px;
+        z-index: 45;
+      }}
+
+      .tool-button {{
         background: var(--panel-bg);
         border: 1px solid var(--line);
         border-radius: 6px;
@@ -379,17 +393,117 @@ def build_presentation_html(item: ConvertedPdf, slide_notes: dict[tuple[str, int
         font-size: 18px;
         font-weight: 700;
         height: 38px;
-        left: 14px;
         line-height: 1;
         padding: 0;
-        position: fixed;
-        top: 14px;
         width: 38px;
-        z-index: 45;
       }}
 
-      html[data-theme="night"] .theme-toggle {{
+      html[data-theme="night"] .tool-button {{
         box-shadow: 0 8px 20px rgb(0 0 0 / 28%);
+      }}
+
+      .help-dialog {{
+        align-items: center;
+        background: rgb(15 23 42 / 62%);
+        bottom: 0;
+        box-sizing: border-box;
+        display: none;
+        font-family: Arial, "Microsoft JhengHei", sans-serif;
+        justify-content: center;
+        left: 0;
+        padding: 20px;
+        position: fixed;
+        right: 0;
+        top: 0;
+        z-index: 60;
+      }}
+
+      .help-dialog[aria-hidden="false"] {{
+        display: flex;
+      }}
+
+      .help-dialog__panel {{
+        background: var(--panel-bg);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: 0 22px 60px rgb(0 0 0 / 28%);
+        box-sizing: border-box;
+        color: var(--ink);
+        max-height: min(720px, calc(100vh - 40px));
+        max-width: 620px;
+        overflow: auto;
+        padding: 22px;
+        width: 100%;
+      }}
+
+      .help-dialog__header {{
+        align-items: center;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+      }}
+
+      .help-dialog__title {{
+        font-size: 18px;
+        font-weight: 700;
+      }}
+
+      .help-dialog__close {{
+        background: var(--button-bg);
+        border: 0;
+        border-radius: 4px;
+        color: var(--ink);
+        cursor: pointer;
+        font-size: 18px;
+        height: 32px;
+        line-height: 1;
+        width: 32px;
+      }}
+
+      .help-dialog p {{
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.55;
+        margin: 0 0 14px;
+      }}
+
+      .help-dialog table {{
+        border-collapse: collapse;
+        font-size: 15px;
+        width: 100%;
+      }}
+
+      .help-dialog th,
+      .help-dialog td {{
+        border-bottom: 1px solid var(--line);
+        padding: 9px 0;
+        text-align: left;
+        vertical-align: top;
+      }}
+
+      .help-dialog th {{
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 700;
+      }}
+
+      .help-dialog kbd {{
+        background: var(--button-bg);
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        color: var(--ink);
+        display: inline-block;
+        font-family: Arial, "Microsoft JhengHei", sans-serif;
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1;
+        margin: 0 2px;
+        min-width: 22px;
+        padding: 4px 6px;
+        text-align: center;
       }}
 
       .notes-panel {{
@@ -514,11 +628,39 @@ def build_presentation_html(item: ConvertedPdf, slide_notes: dict[tuple[str, int
     </style>
   </head>
   <body>
-    <button class="theme-toggle" type="button" aria-label="切換夜晚模式" aria-pressed="false">🌙</button>
+    <div class="presentation-tools" aria-label="簡報工具">
+      <button class="tool-button help-toggle" type="button" aria-label="開啟使用說明" aria-controls="help-dialog" aria-expanded="false">?</button>
+      <button class="tool-button theme-toggle" type="button" aria-label="切換夜晚模式" aria-pressed="false">🌙</button>
+    </div>
 
     <div class="reveal">
       <div class="slides">
 {section_markup}
+      </div>
+    </div>
+
+    <div class="help-dialog" id="help-dialog" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="help-dialog-title">
+      <div class="help-dialog__panel" role="document">
+        <div class="help-dialog__header">
+          <div class="help-dialog__title" id="help-dialog-title">使用說明</div>
+          <button class="help-dialog__close" type="button" aria-label="關閉使用說明">×</button>
+        </div>
+        <p>使用方向鍵、空白鍵或畫面控制項播放投影片。需要備註時可開啟同頁講者備註面板。</p>
+        <table>
+          <thead>
+            <tr><th>操作</th><th>功能</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>上一頁 / 下一頁</td></tr>
+            <tr><td><kbd>Space</kbd></td><td>下一頁</td></tr>
+            <tr><td><kbd>F</kbd></td><td>切換瀏覽器全螢幕</td></tr>
+            <tr><td><kbd>Esc</kbd></td><td>進入或離開投影片總覽；使用說明開啟時會先關閉說明</td></tr>
+            <tr><td><kbd>S</kbd></td><td>顯示或隱藏講者備註面板</td></tr>
+            <tr><td><kbd>R</kbd></td><td>重置總時間與本頁時間</td></tr>
+            <tr><td><kbd>B</kbd></td><td>切換黑畫面暫停</td></tr>
+            <tr><td>🌙 / ☀️</td><td>切換白天或夜間模式</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -564,6 +706,9 @@ def build_presentation_html(item: ConvertedPdf, slide_notes: dict[tuple[str, int
       const notesContent = document.querySelector(".notes-panel__content");
       const notesClose = document.querySelector(".notes-panel__close");
       const themeToggle = document.querySelector(".theme-toggle");
+      const helpToggle = document.querySelector(".help-toggle");
+      const helpDialog = document.querySelector(".help-dialog");
+      const helpClose = document.querySelector(".help-dialog__close");
       const totalTimer = document.querySelector('[data-timer="total"]');
       const slideTimer = document.querySelector('[data-timer="slide"]');
       const clockTimer = document.querySelector('[data-timer="clock"]');
@@ -639,8 +784,36 @@ def build_presentation_html(item: ConvertedPdf, slide_notes: dict[tuple[str, int
 
       setTheme(document.documentElement.dataset.theme);
 
+      function setHelpDialog(open) {{
+        helpDialog.setAttribute("aria-hidden", open ? "false" : "true");
+        helpToggle.setAttribute("aria-expanded", open ? "true" : "false");
+        if (open) {{
+          helpClose.focus();
+        }} else {{
+          helpToggle.focus();
+        }}
+      }}
+
+      function isHelpDialogOpen() {{
+        return helpDialog.getAttribute("aria-hidden") === "false";
+      }}
+
       notesClose.addEventListener("click", function () {{
         setInlineNotes(false);
+      }});
+
+      helpToggle.addEventListener("click", function () {{
+        setHelpDialog(true);
+      }});
+
+      helpClose.addEventListener("click", function () {{
+        setHelpDialog(false);
+      }});
+
+      helpDialog.addEventListener("click", function (event) {{
+        if (event.target === helpDialog) {{
+          setHelpDialog(false);
+        }}
       }});
 
       themeToggle.addEventListener("click", function () {{
@@ -659,6 +832,15 @@ def build_presentation_html(item: ConvertedPdf, slide_notes: dict[tuple[str, int
 
       document.addEventListener("keydown", function (event) {{
         const key = event.key.toLowerCase();
+
+        if (isHelpDialogOpen()) {{
+          event.preventDefault();
+          event.stopPropagation();
+          if (key === "escape") {{
+            setHelpDialog(false);
+          }}
+          return;
+        }}
 
         if (key === "s") {{
           event.preventDefault();
@@ -682,14 +864,15 @@ def build_presentation_html(item: ConvertedPdf, slide_notes: dict[tuple[str, int
         }}
 
         document.exitFullscreen();
-      }});
+      }}, true);
     </script>
   </body>
 </html>
 """
 
 
-def build_index_html(items: list[ConvertedPdf]) -> str:
+def build_index_html(items: list[ConvertedPdf], site_title: str) -> str:
+    safe_site_title = html.escape(site_title)
     links = "\n".join(
         f"""        <li>
           <a href="{html.escape(item.presentation_html.name)}" data-presentation-link>{html.escape(item.title)}</a>
@@ -702,7 +885,7 @@ def build_index_html(items: list[ConvertedPdf]) -> str:
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>PDF Presentations</title>
+    <title>{safe_site_title}</title>
     <script>
       (function () {{
         let savedTheme = "day";
@@ -764,13 +947,18 @@ def build_index_html(items: list[ConvertedPdf]) -> str:
         justify-content: space-between;
       }}
 
-      .theme-toggle {{
+      .page-tools {{
+        display: flex;
+        flex: 0 0 auto;
+        gap: 8px;
+      }}
+
+      .tool-button {{
         background: var(--surface);
         border: 1px solid var(--line);
         border-radius: 6px;
         color: var(--ink);
         cursor: pointer;
-        flex: 0 0 auto;
         font: inherit;
         font-size: 18px;
         font-weight: 700;
@@ -778,6 +966,102 @@ def build_index_html(items: list[ConvertedPdf]) -> str:
         line-height: 1;
         padding: 0;
         width: 38px;
+      }}
+
+      .help-dialog {{
+        align-items: center;
+        background: rgb(15 23 42 / 62%);
+        bottom: 0;
+        box-sizing: border-box;
+        display: none;
+        justify-content: center;
+        left: 0;
+        padding: 20px;
+        position: fixed;
+        right: 0;
+        top: 0;
+        z-index: 60;
+      }}
+
+      .help-dialog[aria-hidden="false"] {{
+        display: flex;
+      }}
+
+      .help-dialog__panel {{
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: 0 22px 60px rgb(0 0 0 / 28%);
+        box-sizing: border-box;
+        color: var(--ink);
+        max-height: min(720px, calc(100vh - 40px));
+        max-width: 620px;
+        overflow: auto;
+        padding: 22px;
+        width: 100%;
+      }}
+
+      .help-dialog__header {{
+        align-items: center;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+      }}
+
+      .help-dialog__title {{
+        font-size: 18px;
+        font-weight: 700;
+      }}
+
+      .help-dialog__close {{
+        background: var(--bg);
+        border: 0;
+        border-radius: 4px;
+        color: var(--ink);
+        cursor: pointer;
+        font-size: 18px;
+        height: 32px;
+        line-height: 1;
+        width: 32px;
+      }}
+
+      .help-dialog table {{
+        border-collapse: collapse;
+        font-size: 15px;
+        width: 100%;
+      }}
+
+      .help-dialog th,
+      .help-dialog td {{
+        border-bottom: 1px solid var(--line);
+        padding: 9px 0;
+        text-align: left;
+        vertical-align: top;
+      }}
+
+      .help-dialog th {{
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 700;
+      }}
+
+      .help-dialog kbd {{
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        color: var(--ink);
+        display: inline-block;
+        font-family: Arial, "Microsoft JhengHei", sans-serif;
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1;
+        margin: 0 2px;
+        min-width: 22px;
+        padding: 4px 6px;
+        text-align: center;
       }}
 
       p {{
@@ -829,7 +1113,7 @@ def build_index_html(items: list[ConvertedPdf]) -> str:
           flex-direction: column;
         }}
 
-        .theme-toggle {{
+        .page-tools {{
           align-self: flex-start;
         }}
 
@@ -844,16 +1128,46 @@ def build_index_html(items: list[ConvertedPdf]) -> str:
   <body>
     <main>
       <div class="page-header">
-        <h1>PDF Presentations</h1>
-        <button class="theme-toggle" type="button" aria-label="切換夜晚模式" aria-pressed="false">🌙</button>
+        <h1>{safe_site_title}</h1>
+        <div class="page-tools" aria-label="頁面工具">
+          <button class="tool-button help-toggle" type="button" aria-label="開啟使用說明" aria-controls="help-dialog" aria-expanded="false">?</button>
+          <button class="tool-button theme-toggle" type="button" aria-label="切換夜晚模式" aria-pressed="false">🌙</button>
+        </div>
       </div>
       <p>選擇一份文件開始播放投影片。</p>
       <ul>
 {links}
       </ul>
     </main>
+    <div class="help-dialog" id="help-dialog" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="help-dialog-title">
+      <div class="help-dialog__panel" role="document">
+        <div class="help-dialog__header">
+          <div class="help-dialog__title" id="help-dialog-title">使用說明</div>
+          <button class="help-dialog__close" type="button" aria-label="關閉使用說明">×</button>
+        </div>
+        <p>從首頁點選文件名稱開始播放。播放頁可使用下列熱鍵操作投影片。</p>
+        <table>
+          <thead>
+            <tr><th>操作</th><th>功能</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>上一頁 / 下一頁</td></tr>
+            <tr><td><kbd>Space</kbd></td><td>下一頁</td></tr>
+            <tr><td><kbd>F</kbd></td><td>切換瀏覽器全螢幕</td></tr>
+            <tr><td><kbd>Esc</kbd></td><td>進入或離開投影片總覽；使用說明開啟時會先關閉說明</td></tr>
+            <tr><td><kbd>S</kbd></td><td>顯示或隱藏講者備註面板</td></tr>
+            <tr><td><kbd>R</kbd></td><td>重置總時間與本頁時間</td></tr>
+            <tr><td><kbd>B</kbd></td><td>切換黑畫面暫停</td></tr>
+            <tr><td>🌙 / ☀️</td><td>切換白天或夜間模式</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
     <script>
       const themeToggle = document.querySelector(".theme-toggle");
+      const helpToggle = document.querySelector(".help-toggle");
+      const helpDialog = document.querySelector(".help-dialog");
+      const helpClose = document.querySelector(".help-dialog__close");
 
       function setTheme(theme) {{
         const nextTheme = theme === "night" ? "night" : "day";
@@ -884,29 +1198,63 @@ def build_index_html(items: list[ConvertedPdf]) -> str:
 
       setTheme(document.documentElement.dataset.theme);
 
+      function setHelpDialog(open) {{
+        helpDialog.setAttribute("aria-hidden", open ? "false" : "true");
+        helpToggle.setAttribute("aria-expanded", open ? "true" : "false");
+        if (open) {{
+          helpClose.focus();
+        }} else {{
+          helpToggle.focus();
+        }}
+      }}
+
+      helpToggle.addEventListener("click", function () {{
+        setHelpDialog(true);
+      }});
+
+      helpClose.addEventListener("click", function () {{
+        setHelpDialog(false);
+      }});
+
+      helpDialog.addEventListener("click", function (event) {{
+        if (event.target === helpDialog) {{
+          setHelpDialog(false);
+        }}
+      }});
+
       themeToggle.addEventListener("click", function () {{
         setTheme(document.documentElement.dataset.theme === "night" ? "day" : "night");
       }});
+
+      document.addEventListener("keydown", function (event) {{
+        if (event.key.toLowerCase() === "escape" && isHelpDialogOpen()) {{
+          event.preventDefault();
+          setHelpDialog(false);
+        }}
+      }}, true);
     </script>
   </body>
 </html>
 """
 
 
-def validate_args(input_dir: Path, dpi: int, quality: int) -> None:
+def validate_args(input_dir: Path, dpi: int, quality: int, site_title: str) -> None:
     if not input_dir.exists() or not input_dir.is_dir():
         raise ValueError(f"Input directory does not exist or is not a directory: {input_dir}")
     if dpi <= 0:
         raise ValueError("--dpi must be a positive integer.")
     if quality < 0 or quality > 100:
         raise ValueError("--quality must be in range 0-100.")
+    if not site_title.strip():
+        raise ValueError("--site-title must not be empty.")
 
 
 def run() -> int:
     args = parse_args()
     input_dir = Path(args.input_dir).resolve()
     output_dir = Path(args.output_dir).resolve()
-    validate_args(input_dir, args.dpi, args.quality)
+    site_title = args.site_title.strip()
+    validate_args(input_dir, args.dpi, args.quality, site_title)
 
     pdf_files = sorted(input_dir.rglob("*.pdf"))
     if not pdf_files:
@@ -939,7 +1287,7 @@ def run() -> int:
         )
 
     index_html = output_dir / "index.html"
-    index_html.write_text(build_index_html(converted), encoding="utf-8")
+    index_html.write_text(build_index_html(converted, site_title), encoding="utf-8")
     total_slides = sum(item.page_count for item in converted)
     print(f"Converted {len(converted)} PDF file(s).")
     print(f"Generated {total_slides} slide(s).")

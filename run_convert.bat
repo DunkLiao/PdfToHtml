@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal EnableDelayedExpansion
 
 set "SCRIPT_DIR=%~dp0"
 set "PYTHON_EXE=python"
@@ -9,9 +9,19 @@ set "INPUT_DIR=%SCRIPT_DIR%test-pdfs"
 set "OUTPUT_DIR=%SCRIPT_DIR%presentation"
 set "DPI=144"
 set "QUALITY=80"
+set "SITE_TITLE=PDF Presentations"
 
 if not "%~1"=="" (
   set "INPUT_DIR=%~1"
+)
+
+if not "%~2"=="" (
+  set "SITE_TITLE=%~2"
+) else (
+  set /p "SITE_TITLE_INPUT=Site title [PDF Presentations]: "
+  if not "!SITE_TITLE_INPUT!"=="" (
+    set "SITE_TITLE=!SITE_TITLE_INPUT!"
+  )
 )
 
 if not "%PDF_TO_HTML_PYTHON%"=="" (
@@ -25,6 +35,7 @@ echo Running PDF to Reveal.js presentation conversion...
 echo Python: %PYTHON_EXE%
 echo Input:  %INPUT_DIR%
 echo Output: %OUTPUT_DIR%
+echo Title:  %SITE_TITLE%
 echo.
 
 "%PYTHON_EXE%" -c "import pypdfium2, PIL" >nul 2>nul
@@ -35,7 +46,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-"%PYTHON_EXE%" "%SCRIPT_PATH%" --input-dir "%INPUT_DIR%" --output-dir "%OUTPUT_DIR%" --dpi %DPI% --quality %QUALITY%
+"%PYTHON_EXE%" "%SCRIPT_PATH%" --input-dir "%INPUT_DIR%" --output-dir "%OUTPUT_DIR%" --dpi %DPI% --quality %QUALITY% --site-title "%SITE_TITLE%"
 
 if errorlevel 1 (
   echo.
