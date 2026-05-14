@@ -18,6 +18,7 @@ env/
 # Project-generated output
 output/
 presentation/index.html
+presentation/notes.md
 presentation/*.html
 presentation/*/
 !presentation/vendor/
