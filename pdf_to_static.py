@@ -3,10 +3,20 @@ from __future__ import annotations
 import argparse
 import html
 import re
+import shutil
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
 import pypdfium2 as pdfium
+
+
+REVEAL_ASSETS = (
+    Path("reset.css"),
+    Path("reveal.css"),
+    Path("reveal.js"),
+    Path("theme") / "white.css",
+)
 
 
 @dataclass
@@ -15,18 +25,19 @@ class ConvertedPdf:
     source_pdf: Path
     slug: str
     page_count: int
-    page_html: Path
+    presentation_html: Path
+    image_names: list[str]
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Convert PDFs in a directory into per-page WebP images and static HTML pages."
+        description="Convert PDFs in a directory into a Reveal.js presentation backed by WebP images."
     )
     parser.add_argument("--input-dir", required=True, help="Input directory containing PDF files.")
     parser.add_argument(
         "--output-dir",
-        default="output",
-        help="Output directory for generated images and HTML (default: ./output).",
+        default="presentation",
+        help="Output directory for generated images and the Reveal.js presentation (default: ./presentation).",
     )
     parser.add_argument(
         "--dpi",
@@ -79,107 +90,240 @@ def render_pdf_to_webp(pdf_path: Path, image_dir: Path, dpi: int, quality: int) 
     return image_names
 
 
-def build_pdf_page_html(title: str, image_dir_name: str, image_names: list[str]) -> str:
-    safe_title = html.escape(title)
-    image_tags = "\n".join(
-        f'      <img loading="lazy" src="{html.escape(image_dir_name)}/{html.escape(name)}" alt="{safe_title} - Page {idx + 1}" />'
-        for idx, name in enumerate(image_names)
-    )
+def ensure_reveal_assets(output_dir: Path) -> None:
+    project_dir = Path(__file__).resolve().parent
+    source_dir = project_dir / "presentation" / "vendor" / "reveal.js" / "dist"
+    destination_dir = output_dir / "vendor" / "reveal.js" / "dist"
+
+    if source_dir == destination_dir:
+        return
+    if not source_dir.exists():
+        raise RuntimeError(f"Reveal.js assets were not found: {source_dir}")
+
+    for asset in REVEAL_ASSETS:
+        source = source_dir / asset
+        destination = destination_dir / asset
+        if not source.exists():
+            raise RuntimeError(f"Reveal.js asset was not found: {source}")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+
+
+def build_presentation_html(item: ConvertedPdf) -> str:
+    sections: list[str] = []
+    safe_title = html.escape(item.title)
+    safe_slug = html.escape(item.slug)
+    for idx, image_name in enumerate(item.image_names):
+        safe_image = html.escape(image_name)
+        page_number = idx + 1
+        sections.append(
+            f"""      <section data-document="{safe_slug}" data-page="{page_number}">
+        <img src="{safe_slug}/{safe_image}" alt="{safe_title} - Page {page_number}" />
+      </section>"""
+        )
+
+    section_markup = "\n\n".join(sections)
     return f"""<!doctype html>
-<html lang="en">
+<html lang="zh-Hant">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{safe_title}</title>
+    <link rel="stylesheet" href="vendor/reveal.js/dist/reset.css" />
+    <link rel="stylesheet" href="vendor/reveal.js/dist/reveal.css" />
+    <link rel="stylesheet" href="vendor/reveal.js/dist/theme/white.css" />
     <style>
+      :root {{
+        --stage-bg: #eef2f7;
+        --slide-bg: #ffffff;
+        --ink: #172033;
+        --primary: #0b5cab;
+      }}
+
       body {{
         margin: 0;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        background: #f4f6f8;
-        color: #1f2937;
+        background: var(--stage-bg);
       }}
-      main {{
-        max-width: 1100px;
-        margin: 0 auto;
-        padding: 24px 16px 36px;
+
+      .reveal {{
+        color: var(--ink);
+        font-family: Arial, "Microsoft JhengHei", sans-serif;
       }}
-      h1 {{
-        font-size: 24px;
-        margin: 0 0 16px;
+
+      .reveal .slides {{
+        text-align: center;
       }}
-      .pages {{
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
+
+      .reveal section {{
+        align-items: center;
+        background: var(--slide-bg);
+        box-sizing: border-box;
+        display: flex !important;
+        justify-content: center;
+        padding: 0;
       }}
-      img {{
-        width: 100%;
-        height: auto;
-        background: #fff;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
+
+      .reveal section img {{
+        border: 0;
+        box-shadow: none;
+        display: block;
+        margin: 0;
+        max-height: 100%;
+        max-width: 100%;
+        object-fit: contain;
       }}
-      .top-nav {{
-        margin: 0 0 12px;
+
+      .reveal .controls,
+      .reveal .progress {{
+        color: var(--primary);
+      }}
+
+      .reveal .slide-number {{
+        background: rgb(23 32 51 / 82%);
       }}
     </style>
   </head>
   <body>
-    <main>
-      <div class="top-nav"><a href="index.html">← Back to index</a></div>
-      <h1>{safe_title}</h1>
-      <section class="pages">
-{image_tags}
-      </section>
-    </main>
+    <div class="reveal">
+      <div class="slides">
+{section_markup}
+      </div>
+    </div>
+
+    <script src="vendor/reveal.js/dist/reveal.js"></script>
+    <script>
+      Reveal.initialize({{
+        width: 1280,
+        height: 720,
+        controls: true,
+        progress: true,
+        slideNumber: true,
+        keyboard: true,
+        overview: true,
+        transition: "slide"
+      }});
+
+      document.addEventListener("keydown", function (event) {{
+        if (event.key.toLowerCase() !== "f") {{
+          return;
+        }}
+
+        if (!document.fullscreenElement) {{
+          document.documentElement.requestFullscreen();
+          return;
+        }}
+
+        document.exitFullscreen();
+      }});
+    </script>
   </body>
 </html>
 """
 
 
 def build_index_html(items: list[ConvertedPdf]) -> str:
-    rows = "\n".join(
-        f'      <li><a href="{html.escape(item.page_html.name)}">{html.escape(item.title)}</a> <span>({item.page_count} pages)</span></li>'
+    links = "\n".join(
+        f"""        <li>
+          <a href="{html.escape(item.presentation_html.name)}">{html.escape(item.title)}</a>
+          <span>{item.page_count} slides</span>
+        </li>"""
         for item in items
     )
     return f"""<!doctype html>
-<html lang="en">
+<html lang="zh-Hant">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>PDF Static Pages</title>
+    <title>PDF Presentations</title>
     <style>
+      :root {{
+        --bg: #eef2f7;
+        --surface: #ffffff;
+        --ink: #172033;
+        --muted: #5f6b7a;
+        --primary: #0b5cab;
+        --line: #d8e0ea;
+      }}
+
       body {{
+        background: var(--bg);
+        color: var(--ink);
+        font-family: Arial, "Microsoft JhengHei", sans-serif;
         margin: 0;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        background: #f7f7f7;
-        color: #1f2937;
       }}
+
       main {{
-        max-width: 780px;
-        margin: 32px auto;
-        padding: 0 16px;
+        box-sizing: border-box;
+        margin: 0 auto;
+        max-width: 880px;
+        padding: 48px 20px;
       }}
+
       h1 {{
-        margin: 0 0 12px;
+        font-size: 32px;
+        letter-spacing: 0;
+        line-height: 1.2;
+        margin: 0 0 10px;
       }}
+
+      p {{
+        color: var(--muted);
+        font-size: 16px;
+        line-height: 1.6;
+        margin: 0 0 28px;
+      }}
+
       ul {{
-        padding-left: 20px;
+        display: grid;
+        gap: 12px;
+        list-style: none;
+        margin: 0;
+        padding: 0;
       }}
+
       li {{
-        margin: 8px 0;
+        align-items: center;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        display: flex;
+        gap: 16px;
+        justify-content: space-between;
+        padding: 18px 20px;
       }}
+
+      a {{
+        color: var(--primary);
+        font-size: 18px;
+        font-weight: 700;
+        text-decoration: none;
+      }}
+
+      a:hover {{
+        text-decoration: underline;
+      }}
+
       span {{
-        color: #6b7280;
+        color: var(--muted);
+        flex: 0 0 auto;
+        font-size: 14px;
+      }}
+
+      @media (max-width: 560px) {{
+        li {{
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 6px;
+        }}
       }}
     </style>
   </head>
   <body>
     <main>
-      <h1>PDF Static Pages</h1>
-      <p>Generated documents:</p>
+      <h1>PDF Presentations</h1>
+      <p>選擇一份文件開始播放投影片。</p>
       <ul>
-{rows}
+{links}
       </ul>
     </main>
   </body>
@@ -207,6 +351,7 @@ def run() -> int:
         raise ValueError(f"No PDF files found in input directory: {input_dir}")
 
     output_dir.mkdir(parents=True, exist_ok=True)
+    ensure_reveal_assets(output_dir)
     used_slugs: set[str] = set()
     converted: list[ConvertedPdf] = []
 
@@ -215,27 +360,34 @@ def run() -> int:
         slug = unique_slug(slugify(title), used_slugs)
         image_dir = output_dir / slug
         image_names = render_pdf_to_webp(pdf_path, image_dir, args.dpi, args.quality)
-        doc_html_path = output_dir / f"{slug}.html"
-        doc_html_path.write_text(
-            build_pdf_page_html(title=title, image_dir_name=slug, image_names=image_names),
-            encoding="utf-8",
+        presentation_html = output_dir / f"{slug}.html"
+        converted_pdf = ConvertedPdf(
+            title=title,
+            source_pdf=pdf_path,
+            slug=slug,
+            page_count=len(image_names),
+            presentation_html=presentation_html,
+            image_names=image_names,
         )
+        presentation_html.write_text(build_presentation_html(converted_pdf), encoding="utf-8")
         converted.append(
-            ConvertedPdf(
-                title=title,
-                source_pdf=pdf_path,
-                slug=slug,
-                page_count=len(image_names),
-                page_html=doc_html_path,
-            )
+            converted_pdf
         )
 
     index_html = output_dir / "index.html"
     index_html.write_text(build_index_html(converted), encoding="utf-8")
+    total_slides = sum(item.page_count for item in converted)
     print(f"Converted {len(converted)} PDF file(s).")
+    print(f"Generated {total_slides} slide(s).")
+    if total_slides < 5:
+        print("Warning: Phase 1 sample target is at least 5 slides, but the input PDFs produced fewer.")
     print(f"Output: {index_html}")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(run())
+    try:
+        raise SystemExit(run())
+    except (RuntimeError, ValueError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        raise SystemExit(1)

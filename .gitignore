@@ -17,9 +17,15 @@ env/
 
 # Project-generated output
 output/
+presentation/index.html
+presentation/*.html
+presentation/*/
+!presentation/vendor/
+!presentation/vendor/**
 test-pdfs/
 *.pdf
 *.bat
+!run_convert.bat
 
 # OS/log noise
 Thumbs.db
